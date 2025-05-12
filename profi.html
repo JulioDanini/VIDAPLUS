@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>VidaPlus - Cadastro de Profissionais</title>
+  <link rel="stylesheet" href="menu.css">
+  <style>
+    .container {
+      padding: 30px;
+    }
+    .profissionais-container {
+      border: 1px solid #ccc;
+      background-color: #fff;
+      border-radius: 10px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+      padding: 20px;
+    }
+    .btn-marcar, .btn-editar, .btn-excluir, .btn-novo-paciente, .btn-fechar {
+      padding: 8px 16px;
+      font-size: 14px;
+      border: none;
+      cursor: pointer;
+      border-radius: 6px;
+      transition: background 0.2s;
+    }
+    .btn-marcar { background-color: #2e7d32; color: white; }
+    .btn-editar { background-color: #1976d2; color: white; }
+    .btn-excluir { background-color: #d32f2f; color: white; }
+    .btn-novo-paciente { background-color: #0288d1; color: white; margin-bottom: 15px; }
+    .btn-fechar { background-color: #757575; color: white; margin-left: 10px; }
+    .btn-marcar:hover { background-color: #1b5e20; }
+    .btn-editar:hover { background-color: #0d47a1; }
+    .btn-excluir:hover { background-color: #b71c1c; }
+    .btn-novo-paciente:hover { background-color: #01579b; }
+    .btn-fechar:hover { background-color: #424242; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    th, td {
+      border: 1px solid #ddd;
+      padding: 8px;
+      text-align: left;
+    }
+    th {
+      background-color: #f2f2f2;
+    }
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0, 0, 0, 0.5);
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+    }
+    .modal-content {
+      background: white;
+      padding: 25px;
+      border-radius: 10px;
+      width: 400px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    }
+    .modal-content h3 {
+      margin-top: 0;
+    }
+    .modal-content input, .modal-content select, .modal-content textarea {
+      width: 100%;
+      padding: 10px;
+      margin-bottom: 10px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+    }
+    #buscaProfissional {
+      padding: 10px;
+      margin-bottom: 15px;
+      width: 50%;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+    }
+  </style>
+  <script>
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyDH2DCReck0Jq9C19kRKGmxIlHed2eSmSU",
+    authDomain: "vidaplus-9a083.firebaseapp.com",
+    projectId: "vidaplus-9a083",
+    storageBucket: "vidaplus-9a083.appspot.com",
+    messagingSenderId: "1045701058042",
+    appId: "1:1045701058042:web:1ffc625c6978861811d843"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+  const db = firebase.firestore();
+
+    document.addEventListener('DOMContentLoaded', () => {
+  carregarUsuarios();
+      const perfil = localStorage.getItem('perfil');
+      const nome = localStorage.getItem('nome');
+      document.querySelectorAll('#userLabel').forEach(e => e.textContent = 'Usuário: ' + nome);
+      if (perfil === 'padrao') {
+        document.querySelectorAll('.btn-marcar, .btn-editar, .btn-excluir, .btn-novo-paciente').forEach(btn => {
+          btn.disabled = true;
+          btn.style.opacity = '0.5';
+          btn.title = 'Apenas administradores podem executar esta ação.';
+        });
+      }
+    });
+  </script>
+</head>
+<body>
+  <header class="vp-header">
+    <div class="logo">VidaPlus</div>
+    <nav class="vp-nav">
+      <a href="agenda.html" class="vp-nav-link">AGENDA</a>
+      <div class="dropdown">
+        <a tabindex="0" class="vp-nav-link">CADASTRO</a>
+        <div class="dropdown-content">
+          <a href="paciente.html">Pacientes</a>
+          <a href="profi.html">Profissionais</a>
+        </div>
+      </div>
+      <a href="telemed.html" class="vp-nav-link">TELEMEDICINA</a>
+      <div class="dropdown">
+        <a tabindex="0" class="vp-nav-link">ADMINISTRAÇÃO</a>
+        <div class="dropdown-content">
+          <a href="relatorio.html">Relatório Financeiro</a>
+          <a href="suprimentos.html">Suprimentos</a>
+        </div>
+      </div>
+      <div class="dropdown settings-dropdown">
+        <a class="settings-icon" tabindex="0" title="Perfil">⚙️</a>
+        <div class="dropdown-content">
+          <a href="#" id="userLabel">Usuário</a>
+          <a href="alterarsenha.html" id="linkAlterarSenha">Alterar Senha</a>
+          <a href="login.html" id="linkSair">Sair</a>
+        </div>
+      </div>
+    </nav>
+  </header>
+
+  <div class="container">
+    <div class="profissionais-container">
+      <h2>Profissionais</h2>
+      <input type="text" id="buscaProfissional" placeholder="Buscar por nome ou especialidade" oninput="filtrarProfissionais()">
+      <button class="btn-novo-paciente" onclick="abrirModalNovoProfissional()">Novo Profissional</button>
+      <table>
+        <thead>
+          <tr>
+            <th>Nome</th>
+            <th>Especialidade</th>
+            <th>Valor Consulta</th>
+            <th>Valor Teleconsulta</th>
+            <th>Ações</th>
+          </tr>
+        </thead>
+        <tbody id="listaProfissionais"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="modal" id="modal-profissional">
+    <div class="modal-content">
+      <h3 id="titulo-modal">Novo Profissional</h3>
+      <input type="text" id="nomeProfissional" placeholder="Nome" maxlength="50">
+      <select id="especialidade">
+        <option value="" disabled selected>Selecione a especialidade</option>
+        <option value="Clínico Geral">Clínico Geral</option>
+        <option value="Oncológica">Oncologia</option>
+        <option value="Cardiologia">Cardiologia</option>
+        <option value="Endocrinologia">Endocrinologia</option>
+        <option value="Gastroenterologia">Gastroenterologia</option>
+        <option value="Pediatria">Pediatria</option>
+        <option value="Pneumologia">Pneumologia</option>
+        <option value="Neurologia">Neurologia</option>
+        <option value="Psiquiatria">Psiquiatria</option>
+        <option value="Reumatologia">Reumatologia</option>
+        <option value="Hematologia">Hematologia</option>
+        <option value="Nefrologia">Nefrologia</option>
+        <option value="Infectologia">Infectologia</option>
+        <option value="Geriatria">Geriatria</option>
+        <option value="ADM">Administrador</option>
+      </select>
+      <input type="number" id="valorConsulta" placeholder="Valor da Consulta Presencial" >
+      <input type="number" id="valorTeleconsulta" placeholder="Valor da Teleconsulta">
+      <input type="email" id="emailProfissional" placeholder="E-mail do Profissional">
+      <select id="perfilProfissional">
+        <option value="padrao">Padrão</option>
+        <option value="admin">Administrador</option>
+      </select>
+      <button class="btn-marcar" onclick="salvarProfissional()">Salvar</button>
+      <button class="btn-fechar" onclick="fecharModalProfissional()">Fechar</button>
+    </div>
+  </div>
+
+  <script>
+    let profissionais = [];
+    let editandoIndex = -1;
+
+    
+    function salvarProfissional() {
+  const nome = document.getElementById('nomeProfissional').value.trim();
+  const especialidade = document.getElementById('especialidade').value.trim();
+  const valorConsulta = document.getElementById('valorConsulta').value.trim();
+  const valorTeleconsulta = document.getElementById('valorTeleconsulta').value.trim();
+  const email = document.getElementById('emailProfissional').value.trim().toLowerCase();
+  const perfil = document.getElementById('perfilProfissional').value;
+
+  const emailRegex = /^[\w.-]+@[\w.-]+\.\w{2,}$/;
+  if (!emailRegex.test(email)) {
+    alert("E-mail inválido.");
+    return;
+  }
+
+  if (!nome || !especialidade || !valorConsulta || !valorTeleconsulta || !email || !perfil) {
+    alert("Preencha todos os campos!");
+    return;
+  }
+
+  db.collection("usuarios").doc(email).get().then(doc => {
+    if (doc.exists) {
+      alert("Este e-mail já está cadastrado.");
+      return;
+    }
+
+    const profissional = { nome, especialidade, valorConsulta, valorTeleconsulta, email, perfil };
+
+    auth.createUserWithEmailAndPassword(email, "123mudar")
+      .then(() => auth.sendPasswordResetEmail(email))
+      .then(() => db.collection("usuarios").doc(email).set(profissional))
+      .then(() => {
+        alert("Profissional cadastrado com sucesso. Um e-mail foi enviado para redefinir a senha.");
+        fecharModalProfissional();
+        carregarUsuarios();
+      })
+      .catch(error => {
+        alert("Erro ao criar usuário: " + error.message);
+        console.error(error);
+      });
+
+  }).catch(error => {
+    alert("Erro ao verificar e-mail existente: " + error.message);
+    console.error(error);
+  });
+}
+
+    function atualizarTabela() {
+      const tbody = document.getElementById('listaProfissionais');
+      tbody.innerHTML = '';
+      profissionais.forEach((profissional, index) => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${profissional.nome}</td>
+          <td>${profissional.especialidade}</td>
+          <td>${profissional.valorConsulta}</td>
+          <td>${profissional.valorTeleconsulta}</td>
+          <td>
+            <button class="btn-editar" onclick="editarProfissional(${index})">Editar</button>
+            <button class="btn-excluir" onclick="excluirProfissional(${index})">Excluir</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function excluirProfissional(index) {
+      if (confirm("Deseja excluir este profissional?")) {
+        profissionais.splice(index, 1);
+        atualizarTabela();
+      }
+    }
+
+    function editarProfissional(index) {
+      const profissional = profissionais[index];
+      document.getElementById('nomeProfissional').value = profissional.nome;
+      document.getElementById('especialidade').value = profissional.especialidade;
+      document.getElementById('valorConsulta').value = profissional.valorConsulta;
+      document.getElementById('valorTeleconsulta').value = profissional.valorTeleconsulta;
+      editandoIndex = index;
+      abrirModalNovoProfissional();
+    }
+
+    function abrirModalNovoProfissional() {
+      document.getElementById('modal-profissional').style.display = 'flex';
+    }
+
+    function fecharModalProfissional() {
+      document.getElementById('modal-profissional').style.display = 'none';
+      document.querySelectorAll('#modal-profissional input').forEach(el => el.value = '');
+    }
+
+    function filtrarProfissionais() {
+      const termo = document.getElementById('buscaProfissional').value.toLowerCase();
+      const linhas = document.querySelectorAll('#listaProfissionais tr');
+      linhas.forEach(linha => {
+        const nome = linha.children[0].textContent.toLowerCase();
+        const especialidade = linha.children[1].textContent.toLowerCase();
+        linha.style.display = nome.includes(termo) || especialidade.includes(termo) ? '' : 'none';
+      });
+    }
+  </script>
+
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+  carregarUsuarios();
+    const nome = localStorage.getItem('nome');
+    const perfil = localStorage.getItem('perfil');
+
+    const label = document.getElementById('userLabel');
+    if (label && nome) {
+      label.textContent = 'Usuário: ' + nome;
+    }
+
+    // Redireciona se o nome não estiver armazenado (usuário não logado)
+    if (!nome || !perfil) {
+      alert('Sessão expirada. Faça login novamente.');
+      window.location.href = 'login.html';
+    }
+
+    if (perfil === 'padrao') {
+      const menus = ['#cadastroMenu', '#adminMenu'];
+      menus.forEach(id => {
+        const el = document.querySelector(id);
+        if (el) el.style.display = 'none';
+      });
+
+      document.querySelectorAll('.btn-marcar, .btn-editar, .btn-excluir, .btn-novo-paciente')
+        .forEach(btn => {
+          btn.disabled = true;
+          btn.style.opacity = '0.5';
+        });
+    }
+  });
+</script>
+
+
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+  carregarUsuarios();
+    const nome = localStorage.getItem('nome');
+    const perfil = localStorage.getItem('perfil');
+
+    const label = document.getElementById('userLabel');
+    if (label && nome) {
+      label.textContent = 'Usuário: ' + nome;
+    }
+
+    if (!nome || !perfil) {
+      alert('Sessão expirada. Faça login novamente.');
+      window.location.href = 'login.html';
+      return;
+    }
+
+    const paginaAtual = window.location.pathname.split("/").pop();
+    const permitido = ['agenda.html', 'telemed.html', 'alterarsenha.html'];
+    if (perfil === 'padrao' && !permitido.includes(paginaAtual)) {
+      alert('Acesso restrito ao seu perfil. Redirecionando...');
+      window.location.href = 'agenda.html';
+    }
+
+    const linkSenha = document.getElementById('linkAlterarSenha');
+    if (linkSenha) linkSenha.href = 'alterarsenha.html';
+
+    const linkSair = document.getElementById('linkSair');
+    if (linkSair) linkSair.href = 'login.html';
+  });
+
+function carregarUsuarios() {
+  db.collection("usuarios").get().then(snapshot => {
+    const tbody = document.getElementById('listaProfissionais');
+    tbody.innerHTML = '';
+    snapshot.forEach(doc => {
+      const profissional = doc.data();
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${profissional.nome}</td>
+        <td>${profissional.especialidade}</td>
+        <td>${profissional.valorConsulta}</td>
+        <td>${profissional.valorTeleconsulta}</td>
+        <td>
+          <button class="btn-excluir" onclick="excluirProfissionalFirestore('${doc.id}')">Excluir</button>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+  }).catch(error => {
+    console.error("Erro ao carregar usuários: ", error);
+  });
+}
+
+function excluirProfissionalFirestore(email) {
+  if (!confirm("Deseja excluir este profissional permanentemente?")) return;
+
+  db.collection("usuarios").doc(email).delete().then(() => {
+    alert("Usuário excluído do Firestore. Para excluir do Firebase Authentication, utilize o painel Admin.");
+    carregarUsuarios();
+  }).catch(err => {
+    alert("Erro ao excluir do Firestore: " + err.message);
+  });
+}
+
+</script>
+</body>
+</html>

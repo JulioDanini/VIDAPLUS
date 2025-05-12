@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>VidaPlus - Pacientes</title>
+  <link rel="stylesheet" href="menu.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.mask/1.14.16/jquery.mask.min.js"></script>
+  <style>
+    .container { padding: 30px; }
+    .pacientes-container {
+      border: 1px solid #ccc;
+      background-color: #fff;
+      border-radius: 10px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+      padding: 20px;
+    }
+    .btn-marcar, .btn-editar, .btn-excluir, .btn-novo-paciente, .btn-fechar {
+      padding: 6px 12px;
+      font-size: 14px;
+      border: none;
+      cursor: pointer;
+      border-radius: 4px;
+      transition: background 0.2s;
+    }
+    .btn-marcar { background-color: #2e7d32; color: white; }
+    .btn-marcar:hover { background-color: #1b5e20; }
+    .btn-editar { background-color: #1976d2; color: white; }
+    .btn-editar:hover { background-color: #0d47a1; }
+    .btn-excluir { background-color: #d32f2f; color: white; }
+    .btn-excluir:hover { background-color: #b71c1c; }
+    .btn-novo-paciente { background-color: #0288d1; color: white; margin-bottom: 10px; }
+    .btn-novo-paciente:hover { background-color: #01579b; }
+    .btn-fechar { background-color: #757575; color: white; margin-left: 10px; }
+    .btn-fechar:hover { background-color: #424242; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+    th { background-color: #f2f2f2; }
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background-color: rgba(0,0,0,0.5);
+      justify-content: center;
+      align-items: center;
+    }
+    .modal-content {
+      background-color: #fff;
+      padding: 20px;
+      border-radius: 8px;
+      width: 400px;
+    }
+    .modal-content h3 { margin-top: 0; }
+    .modal-content input, .modal-content select, .modal-content textarea {
+      width: 100%; padding: 8px; margin-bottom: 10px;
+      border: 1px solid #ccc; border-radius: 4px;
+    }
+    #buscaPaciente {
+      padding: 8px;
+      margin-bottom: 10px;
+      width: 50%;
+      border-radius: 4px;
+      border: 1px solid #ccc;
+    }
+  </style>
+</head>
+<body>
+  <header class="vp-header">
+    <div class="logo">VidaPlus</div>
+    <nav class="vp-nav">
+      <a href="agenda.html" class="vp-nav-link">AGENDA</a>
+      <div class="dropdown">
+        <a tabindex="0" class="vp-nav-link">CADASTRO</a>
+        <div class="dropdown-content">
+          <a href="paciente.html">Pacientes</a>
+          <a href="profi.html">Profissionais</a>
+        </div>
+      </div>
+      <a href="telemed.html" class="vp-nav-link">TELEMEDICINA</a>
+      <div class="dropdown">
+        <a tabindex="0" class="vp-nav-link">ADMINISTRAÇÃO</a>
+        <div class="dropdown-content">
+          <a href="relatorio.html">Relatório Financeiro</a>
+          <a href="suprimentos.html">Suprimentos</a>
+        </div>
+      </div>
+      <div class="dropdown settings-dropdown">
+        <a class="settings-icon" tabindex="0" title="Perfil">⚙️</a>
+        <div class="dropdown-content">
+          <a href="#" id="userLabel">Usuário</a>
+          <a href="alterarsenha.html" id="linkAlterarSenha">Alterar Senha</a>
+          <a href="login.html" id="linkSair">Sair</a>
+        </div>
+      </div>
+    </nav>
+  </header>
+
+  <div class="container">
+    <div class="pacientes-container">
+      <h2>Pacientes</h2>
+      <input type="text" id="buscaPaciente" placeholder="Buscar paciente pelo nome" oninput="filtrarPacientes()">
+      <button class="btn-novo-paciente" onclick="abrirModalNovoPaciente()">Novo Paciente</button>
+      <table id="tabelaPacientes">
+        <thead>
+          <tr>
+            <th>Nome</th>
+            <th>CPF</th>
+            <th>Data de Nascimento</th>
+            <th>Email</th>
+            <th>Telefone</th>
+            <th>Ações</th>
+          </tr>
+        </thead>
+        <tbody id="listaPacientes"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="modal" id="modal-paciente">
+    <div class="modal-content">
+      <h3 id="titulo-modal">Novo Paciente</h3>
+      <input type="text" id="nome" placeholder="Nome" maxlength="50">
+      <input type="text" id="cpf" placeholder="CPF">
+      <select id="convenio">
+        <option value="">Tipo de Convênio</option>
+        <option value="vidaplus">Vida Plus</option>
+        <option value="particular">Particular</option>        
+      </select>
+      <input type="date" id="nascimento" placeholder="Data de Nascimento">
+      <input type="tel" id="celular" placeholder="Celular">
+      <input type="email" id="email" placeholder="Email">
+      <input type="text" id="endereco" placeholder="Endereço" maxlength="40">
+      <input type="text" id="bairro" placeholder="Bairro" maxlength="40">
+      <input type="text" id="cidade" placeholder="Cidade" maxlength="30">
+      <input type="text" id="cep" placeholder="CEP">
+      <textarea id="problemas" rows="2" placeholder="Problemas de Saúde"></textarea>
+      <textarea id="medicacoes" rows="2" placeholder="Medicações"></textarea>
+      <button class="btn-marcar" onclick="salvarPaciente()">Salvar</button>
+      <button class="btn-fechar" onclick="fecharModal()">Fechar</button>
+    </div>
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyDH2DCReck0Jq9C19kRKGmxIlHed2eSmSU",
+      authDomain: "vidaplus-9a083.firebaseapp.com",
+      projectId: "vidaplus-9a083",
+      storageBucket: "vidaplus-9a083.appspot.com",
+      messagingSenderId: "1045701058042",
+      appId: "1:1045701058042:web:1ffc625c6978861811d843"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+    const auth = firebase.auth();
+
+    let pacientes = [];
+    let editandoId = null;
+
+    $(document).ready(() => {
+      $('#cpf').mask('000.000.000-00');
+      $('#celular').mask('(00)00000-0000');
+      $('#cep').mask('00000-000');
+    });
+
+    auth.onAuthStateChanged(user => {
+      const nome = localStorage.getItem('nome');
+      const userLabel = document.getElementById('userLabel');
+      if (!user || !nome) {
+        alert('Sessão expirada. Faça login novamente.');
+        return window.location.href = 'login.html';
+      }
+      // Exibe o nome do usuário no menu
+      if (userLabel) {
+        userLabel.textContent = 'Usuário: ' + nome;
+      }
+    });
+
+    async function carregarPacientes() {
+      const snapshot = await db.collection('pacientes').get();
+      pacientes = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      atualizarTabela();
+    }
+
+    function atualizarTabela() {
+      const tbody = document.getElementById('listaPacientes');
+      tbody.innerHTML = '';
+      pacientes.forEach((paciente, index) => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${paciente.nome}</td>
+          <td>${paciente.cpf}</td>
+          <td>${paciente.nascimento}</td>
+          <td>${paciente.email}</td>
+          <td>${paciente.celular}</td>
+          <td>
+            <button class="btn-editar" onclick="editarPaciente(${index})">Editar</button>
+            <button class="btn-excluir" onclick="excluirPaciente(${index})">Excluir</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function validarCampo(id, condicao) {
+      const input = document.getElementById(id);
+      if (condicao) {
+        input.style.border = '1px solid red';
+        return false;
+      } else {
+        input.style.border = '';
+        return true;
+      }
+    }
+
+    async function salvarPaciente() {
+      // Formata telefone para E.164
+      const rawTelefone = document.getElementById('celular').value.trim();
+      const digits = rawTelefone.replace(/\D/g, '');
+      const celularE164 = `+55${digits}`;
+
+      const dados = {
+        nome: nome.value.trim(),
+        cpf: cpf.value.trim(),
+        nascimento: nascimento.value,
+        email: email.value.trim(),
+        celular: celularE164,
+        convenio: convenio.value,
+        endereco: endereco.value.trim(),
+        bairro: bairro.value.trim(),
+        cidade: cidade.value.trim(),
+        cep: cep.value.trim(),
+        problemas: problemas.value.trim(),
+        medicacoes: medicacoes.value.trim()
+      };
+
+      const validacoes = [
+        validarCampo('nome', dados.nome === ''),
+        validarCampo('cpf', !/^\d{3}\.\d{3}\.\d{3}-\d{2}$/.test(dados.cpf)),
+        validarCampo('nascimento', dados.nascimento === ''),
+        validarCampo('celular', !/^\+55\d{11}$/.test(dados.celular)),
+        validarCampo('cep', !/^\d{5}-\d{3}$/.test(dados.cep)),
+        validarCampo('email', !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(dados.email))
+      ];
+
+      if (validacoes.includes(false)) {
+        alert("Por favor, corrija os campos destacados em vermelho.");
+        return;
+      }
+
+      const duplicado = await db.collection('pacientes').where('cpf', '==', dados.cpf).get();
+      if (!duplicado.empty && !editandoId) {
+        alert("Paciente já cadastrado com este CPF!");
+        return;
+      }
+
+      try {
+        if (editandoId) {
+          await db.collection('pacientes').doc(editandoId).update(dados);
+        } else {
+          await db.collection('pacientes').add(dados);
+        }
+        alert("Paciente salvo com sucesso!");
+        fecharModal();
+        carregarPacientes();
+        editandoId = null;
+      } catch (err) {
+        console.error(err);
+        alert("Erro ao salvar paciente.");
+      }
+    }
+
+    function editarPaciente(index) {
+      const p = pacientes[index];
+      editandoId = p.id;
+      for (const key in p) {
+        if (document.getElementById(key)) {
+          document.getElementById(key).value = p[key];
+        }
+      }
+      cpf.disabled = true;
+      abrirModalNovoPaciente();
+    }
+
+    async function excluirPaciente(index) {
+      const p = pacientes[index];
+      if (confirm("Deseja excluir este paciente?")) {
+        await db.collection('pacientes').doc(p.id).delete();
+        carregarPacientes();
+      }
+    }
+
+    function abrirModalNovoPaciente() {
+      document.getElementById('modal-paciente').style.display = 'flex';
+      if (!editandoId) cpf.disabled = false;
+    }
+
+    function fecharModal() {
+      document.getElementById('modal-paciente').style.display = 'none';
+      document.querySelectorAll('#modal-paciente input, #modal-paciente textarea, #modal-paciente select').forEach(el => {
+        el.value = '';
+        el.style.border = '';
+      });
+      editandoId = null;
+    }
+
+    function filtrarPacientes() {
+      const termo = buscaPaciente.value.toLowerCase();
+      document.querySelectorAll('#tabelaPacientes tbody tr').forEach(linha => {
+        const nomeTexto = linha.children[0].textContent.toLowerCase();
+        linha.style.display = nomeTexto.includes(termo) ? '' : 'none';
+      });
+    }
+
+    document.addEventListener('DOMContentLoaded', carregarPacientes);
+  </script>
+</body>
+</html>
