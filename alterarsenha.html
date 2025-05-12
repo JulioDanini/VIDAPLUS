@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Alterar Senha - VidaPlus</title>
+  <link rel="stylesheet" href="menu.css">
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f9f9f9;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+    }
+    .form-container {
+      background: white;
+      padding: 30px;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+      width: 100%;
+      max-width: 400px;
+    }
+    h2 {
+      color: #2e7d32;
+      margin-top: 0;
+    }
+    input {
+      width: 100%;
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+    }
+    button {
+      width: 100%;
+      padding: 10px;
+      background-color: #2e7d32;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+    button:hover {
+      background-color: #1b5e20;
+    }
+    .btn-voltar {
+      background-color: #ccc;
+      color: #333;
+    }
+    .btn-voltar:hover {
+      background-color: #999;
+    }
+    .error-message {
+      color: red;
+      font-size: 14px;
+      margin-top: 5px;
+    }
+  </style>
+</head>
+<body>
+  <div class="form-container">
+    <h2>Alterar Senha</h2>
+    <input type="password" id="novaSenha" placeholder="Nova senha">
+    <button id="btnAlterar" disabled>Atualizar Senha</button>
+    <button class="btn-voltar" onclick="window.location.href='agenda.html'">Voltar para Agenda</button>
+    <p class="error-message" id="msg"></p>
+  </div>
+
+  <script>
+    // Firebase Configuração
+    const firebaseConfig = {
+      apiKey: "AIzaSyDH2DCReck0Jq9C19kRKGmxIlHed2eSmSU",
+      authDomain: "vidaplus-9a083.firebaseapp.com",
+      projectId: "vidaplus-9a083",
+      storageBucket: "vidaplus-9a083.appspot.com",
+      messagingSenderId: "1045701058042",
+      appId: "1:1045701058042:web:1ffc625c6978861811d843"
+    };
+
+    if (!firebase.apps.length) {
+      firebase.initializeApp(firebaseConfig);
+    }
+
+    const auth = firebase.auth();
+    const btn = document.getElementById('btnAlterar');
+    const novaSenhaInput = document.getElementById('novaSenha');
+    const msg = document.getElementById('msg');
+
+    auth.onAuthStateChanged(user => {
+      if (user) {
+        btn.disabled = false;
+        btn.addEventListener("click", () => {
+          const novaSenha = novaSenhaInput.value;
+          msg.textContent = "";
+
+          if (!novaSenha || novaSenha.length < 6) {
+            msg.textContent = "A senha deve ter no mínimo 6 caracteres.";
+            return;
+          }
+
+          user.updatePassword(novaSenha)
+            .then(() => {
+              alert("Senha atualizada com sucesso!");
+              window.location.href = "agenda.html";
+            })
+            .catch(error => {
+              msg.textContent = "Erro ao atualizar senha: " + error.message;
+              if (error.code === 'auth/requires-recent-login') {
+                alert("Por segurança, faça login novamente para alterar a senha.");
+                auth.signOut().then(() => {
+                  window.location.href = 'login.html';
+                });
+              }
+            });
+        });
+      } else {
+        alert("Sessão expirada. Faça login novamente.");
+        window.location.href = "login.html";
+      }
+    });
+  </script>
+</body>
+</html>

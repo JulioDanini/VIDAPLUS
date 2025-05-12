@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>VidaPlus - Sistema de Gestão Hospitalar</title>
+  <link rel="stylesheet" href="menu.css">
+  <style>
+    .container {
+      padding: 30px;
+    }
+    #meet {
+      width: 100%;
+      height: 600px;
+      border: none;
+      margin-top: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    }
+  </style>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const perfil = localStorage.getItem('perfil');
+      const nome = localStorage.getItem('nome');
+      document.querySelectorAll('#userLabel').forEach(e => e.textContent = 'Usuário: ' + nome);
+      if (perfil === 'padrao') {
+        document.querySelectorAll('#adminMenu, #cadastroMenu').forEach(menu => {
+          if (menu) menu.style.display = 'none';
+        });
+      }
+    });
+  </script>
+</head>
+<body>
+  <header class="vp-header">
+    <div class="logo">VidaPlus</div>
+    <nav class="vp-nav">
+      <a href="agenda.html" class="vp-nav-link">AGENDA</a>
+
+      <div class="dropdown" id="cadastroMenu">
+        <a tabindex="0" class="vp-nav-link">CADASTRO</a>
+        <div class="dropdown-content">
+          <a href="paciente.html">Pacientes</a>
+          <a href="profi.html">Profissionais</a>
+        </div>
+      </div>
+
+      <a href="telemed.html" class="vp-nav-link">TELEMEDICINA</a>
+
+      <div class="dropdown" id="adminMenu">
+        <a tabindex="0" class="vp-nav-link">ADMINISTRAÇÃO</a>
+        <div class="dropdown-content">
+          <a href="relatorio.html">Relatório Financeiro</a>
+          <a href="suprimentos.html">Suprimentos</a>
+        </div>
+      </div>
+
+      <div class="dropdown settings-dropdown">
+        <a class="settings-icon" tabindex="0" title="Perfil">⚙️</a>
+        <div class="dropdown-content">
+          <a href="#" id="userLabel">Usuário</a>
+          <a href="#" id="linkAlterarSenha">Alterar Senha</a>
+          <a href="#" id="linkSair">Sair</a>
+        </div>
+      </div>
+    </nav>
+  </header>
+
+  <div class="container">
+    <h2>Telemedicina Vida Plus</h2>
+    <div id="meet"></div>
+  </div>
+
+  <script src="https://meet.jit.si/external_api.js"></script>
+  <script>
+    const domain = "meet.jit.si";
+    const options = {
+      roomName: "VIDAPLUS",
+      width: "100%",
+      height: 600,
+      parentNode: document.querySelector("#meet"),
+      userInfo: {
+        displayName: "Digite seu nome"
+      },
+      configOverwrite: {
+        startWithAudioMuted: true,
+        startWithVideoMuted: true
+      },
+      interfaceConfigOverwrite: {
+        SHOW_JITSI_WATERMARK: false,
+        SHOW_WATERMARK_FOR_GUESTS: false,
+        DEFAULT_REMOTE_DISPLAY_NAME: 'Participante',
+        TOOLBAR_BUTTONS: [
+          'microphone', 'camera', 'chat', 'raisehand',
+          'tileview', 'fullscreen', 'hangup'
+        ]
+      }
+    };
+
+    const api = new JitsiMeetExternalAPI(domain, options);
+  </script>
+
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const nome = localStorage.getItem('nome');
+    const perfil = localStorage.getItem('perfil');
+
+    const label = document.getElementById('userLabel');
+    if (label && nome) {
+      label.textContent = 'Usuário: ' + nome;
+    }
+
+    // Redireciona se o nome não estiver armazenado (usuário não logado)
+    if (!nome || !perfil) {
+      alert('Sessão expirada. Faça login novamente.');
+      window.location.href = 'login.html';
+    }
+
+    if (perfil === 'padrao') {
+      const menus = ['#cadastroMenu', '#adminMenu'];
+      menus.forEach(id => {
+        const el = document.querySelector(id);
+        if (el) el.style.display = 'none';
+      });
+
+      document.querySelectorAll('.btn-marcar, .btn-editar, .btn-excluir, .btn-novo-paciente')
+        .forEach(btn => {
+          btn.disabled = true;
+          btn.style.opacity = '0.5';
+        });
+    }
+  });
+</script>
+
+
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const nome = localStorage.getItem('nome');
+    const perfil = localStorage.getItem('perfil');
+
+    const label = document.getElementById('userLabel');
+    if (label && nome) {
+      label.textContent = 'Usuário: ' + nome;
+    }
+
+    if (!nome || !perfil) {
+      alert('Sessão expirada. Faça login novamente.');
+      window.location.href = 'login.html';
+      return;
+    }
+
+    const paginaAtual = window.location.pathname.split("/").pop();
+    const permitido = ['agenda.html', 'telemed.html', 'alterarsenha.html'];
+    if (perfil === 'padrao' && !permitido.includes(paginaAtual)) {
+      alert('Acesso restrito ao seu perfil. Redirecionando...');
+      window.location.href = 'agenda.html';
+    }
+
+    const linkSenha = document.getElementById('linkAlterarSenha');
+    if (linkSenha) linkSenha.href = 'alterarsenha.html';
+
+    const linkSair = document.getElementById('linkSair');
+    if (linkSair) linkSair.href = 'login.html';
+  });
+</script>
+
+
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const nome = localStorage.getItem('nome');
+    const perfil = localStorage.getItem('perfil');
+
+    const label = document.getElementById('userLabel');
+    if (label && nome) {
+      label.textContent = 'Usuário: ' + nome;
+    }
+
+    if (!nome || !perfil) {
+      alert('Sessão expirada. Faça login novamente.');
+      window.location.href = 'login.html';
+      return;
+    }
+
+    const paginaAtual = window.location.pathname.split("/").pop();
+    const permitido = ['agenda.html', 'telemed.html', 'alterarsenha.html'];
+    if (perfil === 'padrao' && !permitido.includes(paginaAtual)) {
+      alert('Acesso restrito ao seu perfil. Redirecionando...');
+      window.location.href = 'agenda.html';
+    }
+
+    if (perfil === 'padrao') {
+      const menus = ['#cadastroMenu', '#adminMenu'];
+      menus.forEach(id => {
+        const el = document.querySelector(id);
+        if (el) el.style.display = 'none';
+      });
+    }
+
+    const linkSenha = document.getElementById('linkAlterarSenha');
+    if (linkSenha) linkSenha.href = 'alterarsenha.html';
+
+    const linkSair = document.getElementById('linkSair');
+    if (linkSair) linkSair.href = 'login.html';
+  });
+</script>
+
+</body>
+</html>

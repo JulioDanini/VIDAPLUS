@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VidaPlus - Agenda</title>
+  <link rel="stylesheet" href="menu.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+  <!-- EmailJS SDK v4 -->
+  <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+  <script>
+    // Inicializa EmailJS com sua Public Key
+    emailjs.init('h3yw8HwM5gwuePe5y');
+  </script>
+  <style>
+    .agenda-container { padding: 20px; }
+    .calendar { margin-top: 20px; border: 1px solid #ccc; padding: 10px; background: #fff; border-radius: 8px; max-height: 500px; overflow-y: auto; }
+    .time-line { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
+    .time-slot { display: flex; justify-content: space-between; align-items: center; padding: 10px; border: 1px solid #ddd; border-radius: 6px; background: #fdfdfd; }
+    .time-slot.confirmado { background: #e8f5e9; border-color: #81c784; }
+    .confirmed { color: green; font-weight: bold; margin-left: 10px; }
+    .btn-marcar, .btn-editar, .btn-excluir, .btn-confirmar, .btn-gerar-pdf { padding: 6px 12px; font-size: 14px; border: none; cursor: pointer; border-radius: 4px; transition: background 0.2s; }
+    .btn-marcar { background: #2e7d32; color: white; }
+    .btn-editar { background: #1976d2; color: white; }
+    .btn-excluir { background: #d32f2f; color: white; }
+    .btn-confirmar { background: #ff9800; color: white; }
+    .btn-gerar-pdf { background: #673ab7; color: white; margin-top: 20px; }
+    .btn-marcar:hover { background: #1b5e20; }
+    .btn-editar:hover { background: #0d47a1; }
+    .btn-excluir:hover { background: #b71c1c; }
+    .btn-confirmar:hover { background: #f57c00; }
+    .btn-gerar-pdf:hover { background: #512da8; }
+    .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; z-index: 1000; }
+    .modal-content { background: white; padding: 20px; border-radius: 8px; width: 300px; box-shadow: 0 4px 8px rgba(0,0,0,0.2); }
+    .modal-content input, .modal-content select, .modal-content textarea { width: 100%; padding: 8px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 4px; }
+    .close-btn { background: #d32f2f; color: white; border: none; padding: 5px 10px; float: right; cursor: pointer; border-radius: 4px; }
+    .agenda-header { margin-bottom: 10px; }
+  </style>
+</head>
+<body>
+  <header class="vp-header">
+    <div class="logo">VidaPlus</div>
+    <nav class="vp-nav">
+      <a href="agenda.html" class="vp-nav-link">AGENDA</a>
+      <div class="dropdown">
+        <a class="vp-nav-link" tabindex="0">CADASTRO</a>
+        <div class="dropdown-content">
+          <a href="paciente.html">Pacientes</a>
+          <a href="profi.html">Profissionais</a>
+        </div>
+      </div>
+      <a href="telemed.html" class="vp-nav-link">TELEMEDICINA</a>
+      <div class="dropdown">
+        <a class="vp-nav-link" tabindex="0">ADMINISTRAÇÃO</a>
+        <div class="dropdown-content">
+          <a href="relatorio.html">Relatório Financeiro</a>
+          <a href="suprimentos.html">Suprimentos</a>
+        </div>
+      </div>
+      <div class="dropdown settings-dropdown">
+        <a class="settings-icon" tabindex="0" title="Perfil">⚙️</a>
+        <div class="dropdown-content">
+          <a href="#" id="userLabel">Usuário</a>
+          <a href="alterarsenha.html" id="linkAlterarSenha">Alterar Senha</a>
+          <a href="login.html" id="linkSair">Sair</a>
+        </div>
+      </div>
+    </nav>
+  </header>
+
+  <div class="agenda-container">
+    <div class="agenda-header">
+      <label for="dataSelecionada">Selecione a data:</label>
+      <input type="date" id="dataSelecionada">
+    </div>
+    <div class="calendar">
+      <div id="timeLine" class="time-line"></div>
+    </div>
+    <button class="btn-gerar-pdf" onclick="gerarRelatorioPDF()">Gerar Relatório em PDF</button>
+  </div>
+
+  <div id="modal-agendamento" class="modal">
+    <div class="modal-content">
+      <button class="close-btn" onclick="fecharModal()">X</button>
+      <h3>Marcar Consulta</h3>
+      <input list="pacientes" id="nomePaciente" placeholder="Nome do Paciente">
+      <datalist id="pacientes"></datalist>
+      <input list="profissionais" id="profissional" placeholder="Nome do Profissional">
+      <datalist id="profissionais"></datalist>
+      <select id="tipoConsulta">
+        <option value="">Tipo de Consulta</option>
+        <option value="Presencial">Presencial</option>
+        <option value="Telemedicina">Telemedicina</option>
+      </select>
+      <textarea id="observacoes" placeholder="Observações"></textarea>
+      <input type="hidden" id="dataConsulta">
+      <input type="hidden" id="horaConsulta">
+      <button class="btn-marcar" onclick="salvarAgendamento()">Salvar</button>
+    </div>
+  </div>
+
+  <script>
+    function formatDateBr(dateStr) {
+      const [year, month, day] = dateStr.split('-');
+      return `${day}/${month}/${year}`;
+    }
+
+    // Firebase init
+    const firebaseConfig = {
+      apiKey: "AIzaSyDH2DCReck0Jq9C19kRKGmxIlHed2eSmSU",
+      authDomain: "vidaplus-9a083.firebaseapp.com",
+      projectId: "vidaplus-9a083",
+      storageBucket: "vidaplus-9a083.appspot.com",
+      messagingSenderId: "1045701058042",
+      appId: "1:1045701058042:web:1ffc625c6978861811d843"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+
+    const horarios = ["08:00","08:30","09:00","09:30","10:00","10:30","11:00","11:30","13:00","13:30","14:00","14:30","15:00","15:30","16:00","16:30","17:00","17:30","18:00","18:30"];
+    let agendamentos = [], editandoId = null;
+    const pacientesData = {}, profData = {};
+
+    auth.onAuthStateChanged(user => {
+      if (!user) {
+        alert('Sessão expirada. Faça login novamente.');
+        return window.location.href='login.html';
+      }
+    });
+
+    async function carregarListas() {
+      const pacSnap = await db.collection('pacientes').get();
+      pacSnap.docs.forEach(doc => {
+        const d = doc.data();
+        pacientesData[d.nome] = { email: d.email, telefone: d.celular };
+        document.getElementById('pacientes').appendChild(new Option(d.nome, d.nome));
+      });
+      const profSnap = await db.collection('usuarios').get();
+      profSnap.docs.forEach(doc => {
+        const d = doc.data();
+        profData[d.nome] = { valorPresencial: parseFloat(d.valorConsulta)||0, valorTelemedicina: parseFloat(d.valorTeleconsulta)||0 };
+        document.getElementById('profissionais').appendChild(new Option(d.nome, d.nome));
+      });
+    }
+
+    async function carregarAgendamentos(data) {
+      const snap = await db.collection('agendamentos').where('data','==',data).get();
+      agendamentos = snap.docs.map(d=> ({ id:d.id,...d.data()}));
+    }
+
+    async function carregarHorarios() {
+      const data = document.getElementById('dataSelecionada').value;
+      await carregarAgendamentos(data);
+      const line = document.getElementById('timeLine'); line.innerHTML='';
+      horarios.forEach(hora => {
+        const ag = agendamentos.find(a => a.hora===hora);
+        const slot = document.createElement('div');
+        slot.className = 'time-slot' + (ag?.confirmado?' confirmado':'');
+        if (ag) {
+          slot.innerHTML = `<div>Horário: <strong>${hora}</strong> - Paciente: <strong>${ag.nomePaciente}</strong> - Profissional: <strong>${ag.profissional}</strong><br><small>Tipo da Consulta: <strong>${ag.tipoConsulta}</strong> - Valor da Consulta R$: ${(ag.valor||0).toFixed(2)}</small>${ag.confirmado?'<span class="confirmed">Confirmada</span>':''}</div><div>${!ag.confirmado?`<button class="btn-confirmar" onclick="confirmarConsulta('${ag.id}')">Confirmar</button><button class="btn-editar" onclick="editarAgendamento('${ag.id}')">Editar</button><button class="btn-excluir" onclick="excluirAgendamento('${ag.id}')">Excluir</button>`:''}</div>`;
+        } else {
+          slot.innerHTML = `<span>${hora}</span><button class="btn-marcar" onclick="abrirModal('${data}','${hora}')">Marcar</button>`;
+        }
+        line.appendChild(slot);
+      });
+    }
+
+    function abrirModal(data, hora) {
+      document.getElementById('modal-agendamento').style.display='flex';
+      document.getElementById('dataConsulta').value = data;
+      document.getElementById('horaConsulta').value = hora;
+    }
+
+    function fecharModal() {
+      document.getElementById('modal-agendamento').style.display='none';
+      document.querySelectorAll('#modal-agendamento input,#modal-agendamento textarea,#modal-agendamento select').forEach(el=>el.value='');
+      editandoId=null;
+    }
+
+    async function salvarAgendamento() {
+      const dataIso = document.getElementById('dataConsulta').value;
+      const hora = document.getElementById('horaConsulta').value;
+      const nome = document.getElementById('nomePaciente').value.trim();
+      const prof = document.getElementById('profissional').value;
+      const tipo = document.getElementById('tipoConsulta').value;
+      const obs = document.getElementById('observacoes').value;
+      if (!nome||!prof||!tipo||!obs) return alert('Preencha todos os campos!');
+      const pacienteInfo = pacientesData[nome];
+      if (!pacienteInfo||!pacienteInfo.email) { alert('E-mail do paciente não encontrado.'); return; }
+      const valor = tipo==='Presencial'?profData[prof].valorPresencial:profData[prof].valorTelemedicina;
+      const link = tipo==='Telemedicina'?'https://meet.jit.si/VIDAPLUS':'';
+      const dados = { data:dataIso, hora, nomePaciente:nome, profissional:prof, tipoConsulta:tipo, observacoes:obs, confirmado:false, valor, meetingLink:link };
+      try {
+        if (editandoId) await db.collection('agendamentos').doc(editandoId).update(dados);
+        else await db.collection('agendamentos').add(dados);
+        alert('Consulta salva com sucesso!');
+        const dateBr = formatDateBr(dataIso);
+        sendNotificationEmail(pacienteInfo.email, dateBr, hora, tipo, link);
+        sendWhatsAppNotification(nome, dateBr, hora, tipo, link);
+        fecharModal(); carregarHorarios();
+      } catch(err){console.error(err); alert('Erro ao salvar.');}
+    }
+
+    async function confirmarConsulta(id){
+      const ag = agendamentos.find(a=>a.id===id);
+      const valorAtual = ag.tipoConsulta==='Presencial'?profData[ag.profissional].valorPresencial:profData[ag.profissional].valorTelemedicina;
+      try{ await db.collection('agendamentos').doc(id).update({confirmado:true, valor:valorAtual});
+        const dateBr = formatDateBr(ag.data);
+        sendNotificationEmail(pacientesData[ag.nomePaciente].email, dateBr, ag.hora, ag.tipoConsulta, ag.meetingLink);
+        alert(`Consulta confirmada! Valor: R$ ${valorAtual.toFixed(2)}`);
+        carregarHorarios();
+      } catch(err){console.error(err); alert('Erro ao confirmar.');}
+    }
+
+    function editarAgendamento(id){
+      const ag = agendamentos.find(a=>a.id===id);
+      abrirModal(ag.data, ag.hora);
+      document.getElementById('nomePaciente').value=ag.nomePaciente;
+      document.getElementById('profissional').value=ag.profissional;
+      document.getElementById('tipoConsulta').value=ag.tipoConsulta;
+      document.getElementById('observacoes').value=ag.observacoes;
+      editandoId=id;
+    }
+
+    async function excluirAgendamento(id){
+      if(!confirm('Deseja excluir?')) return;
+      try{ await db.collection('agendamentos').doc(id).delete(); carregarHorarios(); } catch(err){console.error(err); alert('Erro ao excluir.');}
+    }
+
+    function sendNotificationEmail(email, date, time, type, link){
+      console.log('Enviando e-mail para:', email);
+      const templateParams={ to_email:email, date, time, type, link };
+      emailjs.send('service_g7ccfpn','template_zgjlj2m',templateParams,'h3yw8HwM5gwuePe5y')
+        .then(r=>console.log('Email ok', r.status, r.text))
+        .catch(e=>{console.error('Email erro',e);alert('Erro no envio de e-mail');});
+    }
+
+    function sendWhatsAppNotification(nomePaciente,date,time,type,link){
+      let tel=pacientesData[nomePaciente].telefone.replace(/\D/g,'');
+      if(!tel.startsWith('55')) tel='55'+tel;
+      let txt=`Olá *${nomePaciente}*, sua consulta no VIDAPlus em *${date}* às *${time}* foi agendada✅.`;
+      if(type==='Telemedicina') txt+=` Link: ${link}`;
+      window.open(`https://wa.me/${tel}?text=${encodeURIComponent(txt)}`,'_blank');
+    }
+
+    function gerarRelatorioPDF(){
+      const { jsPDF }=window.jspdf;const doc=new jsPDF();let y=10;
+      doc.setFontSize(16);doc.text('Relatório de Consultas Confirmadas',10,y);y+=10;
+      agendamentos.filter(a=>a.confirmado).forEach(a=>{
+        const dateBr=formatDateBr(a.data);doc.setFontSize(12);
+        doc.text(`Data: ${dateBr}, Hora: ${a.hora}, Paciente: ${a.nomePaciente}, Profissional: ${a.profissional}, Valor: R$ ${(a.valor||0).toFixed(2)}`,10,y);
+        y+=7;
+      });
+      doc.save('relatorio-consultas.pdf');
+    }
+
+    document.addEventListener('DOMContentLoaded',async()=>{
+      const nome=localStorage.getItem('nome'), perfil=localStorage.getItem('perfil');
+      if(!nome||!perfil){alert('Sessão expirada');return window.location.href='login.html';}
+      document.getElementById('userLabel').textContent='Usuário: '+nome;
+      if(perfil==='padrao'){
+        document.querySelectorAll('.dropdown-content a').forEach(a=>{
+          if(['Pacientes','Profissionais','Relatório Financeiro','Suprimentos'].includes(a.textContent)) a.closest('.dropdown').style.display='none';
+        });
+      }
+      await carregarListas();
+      const input=document.getElementById('dataSelecionada');const hoje=new Date().toISOString().split('T')[0];input.value=hoje; input.addEventListener('change', carregarHorarios);
+      carregarHorarios();
+    });
+  </script>
+</body>
+</html>

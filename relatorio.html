@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VidaPlus - Relatório Financeiro</title>
+  <link rel="stylesheet" href="menu.css">
+  <style>
+    .container { padding: 30px; }
+    .filtro-container { margin-bottom: 20px; display: flex; gap: 10px; align-items: center; }
+    .filtro-container label { font-weight: bold; }
+    .filtro-container select { padding: 6px 10px; border-radius: 6px; border: 1px solid #ccc; }
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+    th { background-color: #f2f2f2; }
+    .loading, .error { text-align: center; color: #666; }
+    .error { color: red; }
+  </style>
+
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+</head>
+<body>
+  <header class="vp-header">
+    <div class="logo">VidaPlus</div>
+    <nav class="vp-nav">
+      <a href="agenda.html" class="vp-nav-link">AGENDA</a>
+      <div class="dropdown">
+        <a tabindex="0" class="vp-nav-link">CADASTRO</a>
+        <div class="dropdown-content">
+          <a href="paciente.html">Pacientes</a>
+          <a href="profi.html">Profissionais</a>
+        </div>
+      </div>
+      <a href="telemed.html" class="vp-nav-link">TELEMEDICINA</a>
+      <div class="dropdown">
+        <a tabindex="0" class="vp-nav-link">ADMINISTRAÇÃO</a>
+        <div class="dropdown-content">
+          <a href="relatorio.html">Relatório Financeiro</a>
+          <a href="suprimentos.html">Suprimentos</a>
+        </div>
+      </div>
+      <div class="dropdown settings-dropdown">
+        <a class="settings-icon" tabindex="0" title="Perfil">⚙️</a>
+        <div class="dropdown-content">
+          <a href="#" id="userLabel">Usuário</a>
+          <a href="alterarsenha.html" id="linkAlterarSenha">Alterar Senha</a>
+          <a href="login.html" id="linkSair">Sair</a>
+        </div>
+      </div>
+    </nav>
+  </header>
+
+  <div class="container">
+    <h2>Relatório de Consultas Confirmadas por Profissional</h2>
+    <div class="filtro-container">
+      <label for="mesFiltro">Mês:</label>
+      <select id="mesFiltro">
+        <option value="01">Janeiro</option>
+        <option value="02">Fevereiro</option>
+        <option value="03">Março</option>
+        <option value="04">Abril</option>
+        <option value="05">Maio</option>
+        <option value="06">Junho</option>
+        <option value="07">Julho</option>
+        <option value="08">Agosto</option>
+        <option value="09">Setembro</option>
+        <option value="10">Outubro</option>
+        <option value="11">Novembro</option>
+        <option value="12">Dezembro</option>
+      </select>
+
+      <label for="anoFiltro">Ano:</label>
+      <select id="anoFiltro"></select>
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Profissional</th>
+          <th>Consultas Realizadas</th>
+          <th>Valor a Receber (R$)</th>
+        </tr>
+      </thead>
+      <tbody id="tabelaRelatorio">
+        <tr><td colspan="3" class="loading">Aguardando autenticação...</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <script>
+    // Configuração Firebase
+    const firebaseConfig = {
+      apiKey: "AIzaSyDH2DCReck0Jq9C19kRKGmxIlHed2eSmSU",
+      authDomain: "vidaplus-9a083.firebaseapp.com",
+      projectId: "vidaplus-9a083",
+      storageBucket: "vidaplus-9a083.appspot.com",
+      messagingSenderId: "1045701058042",
+      appId: "1:1045701058042:web:1ffc625c6978861811d843"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+
+    function formatarValor(valor) {
+      return valor.toFixed(2).replace('.', ',');
+    }
+
+    async function filtrarRelatorio() {
+      const mes = document.getElementById('mesFiltro').value;
+      const ano = document.getElementById('anoFiltro').value;
+      const primeiro = `${ano}-${mes}-01`;
+      const ultimoDia = new Date(ano, parseInt(mes), 0).getDate();
+      const ultimo = `${ano}-${mes}-${String(ultimoDia).padStart(2,'0')}`;
+
+      const tbody = document.getElementById('tabelaRelatorio');
+      tbody.innerHTML = '<tr><td colspan="3" class="loading">Carregando dados...</td></tr>';
+
+      try {
+        const snap = await db.collection('agendamentos')
+          .where('data', '>=', primeiro)
+          .where('data', '<=', ultimo)
+          .get();
+
+        const agrupado = {};
+        snap.forEach(doc => {
+          const a = doc.data();
+          if (!a.confirmado) return;
+          const prof = a.profissional;
+          const val = a.valor || 0;
+          if (!agrupado[prof]) agrupado[prof] = { cont: 0, soma: 0 };
+          agrupado[prof].cont++;
+          agrupado[prof].soma += val;
+        });
+
+        tbody.innerHTML = '';
+        if (!Object.keys(agrupado).length) {
+          tbody.innerHTML = '<tr><td colspan="3">Nenhum registro encontrado.</td></tr>';
+          return;
+        }
+        for (const prof in agrupado) {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td>${prof}</td>
+            <td>${agrupado[prof].cont}</td>
+            <td>${formatarValor(agrupado[prof].soma)}</td>
+          `;
+          tbody.appendChild(tr);
+        }
+      } catch (e) {
+        console.error(e);
+        tbody.innerHTML =
+          `<tr><td colspan="3" class="error">Erro ao carregar dados: ${e.message}</td></tr>`;
+      }
+    }
+
+    auth.onAuthStateChanged(user => {
+      if (!user) {
+        alert('Sessão expirada. Faça login novamente.');
+        return window.location.href = 'login.html';
+      }
+      const nome = localStorage.getItem('nome');
+      const perfil = localStorage.getItem('perfil');
+      document.getElementById('userLabel').textContent = 'Usuário: ' + nome;
+      if (perfil === 'padrao') {
+        document.querySelectorAll('.dropdown-content a[href="paciente.html"], .dropdown-content a[href="profi.html"]')
+                .forEach(el => el.parentElement.style.display = 'none');
+      }
+
+      // preencher anos (últimos 5 anos)
+      const anoSelect = document.getElementById('anoFiltro');
+      const anoAtual = new Date().getFullYear();
+      for (let y = anoAtual; y >= anoAtual - 5; y--) {
+        const opt = document.createElement('option');
+        opt.value = y;
+        opt.textContent = y;
+        if (y === anoAtual) opt.selected = true;
+        anoSelect.appendChild(opt);
+      }
+
+      document.getElementById('mesFiltro').addEventListener('change', filtrarRelatorio);
+      anoSelect.addEventListener('change', filtrarRelatorio);
+      filtrarRelatorio();
+    });
+  </script>
+</body>
+</html>
