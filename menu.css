@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 body {
     margin: 0;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -108,4 +109,116 @@ body {
     right: 0;
     left: auto;
     top: 100%;
+=======
+body {
+    margin: 0;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #f9f9f9;
+    color: #333;
+  }
+  
+  .vp-header {
+    background-color: #2e7d32;
+    color: white;
+    padding: 15px 30px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+    position: relative;
+    z-index: 999;
+  }
+  
+  .logo {
+    font-weight: bold;
+    font-size: 22px;
+    letter-spacing: 1px;
+  }
+  
+  .vp-nav {
+    display: flex;
+    gap: 20px;
+    align-items: center;
+    position: relative;
+  }
+  
+  .vp-nav-link,
+  .dropdown > a,
+  .settings-icon {
+    color: white;
+    text-decoration: none;
+    font-weight: bold;
+    cursor: pointer;
+    padding: 8px 14px;
+    border-radius: 6px;
+    transition: background-color 0.3s, color 0.3s;
+    display: flex;
+    align-items: center;
+    position: relative;
+  }
+  
+  .vp-nav-link:hover,
+  .dropdown:hover > a,
+  .settings-icon:hover {
+    background-color: #fdd835;
+    color: #2e7d32;
+  }
+  
+  .dropdown {
+    position: relative;
+  }
+  
+  .dropdown-content {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    background-color: #ffffff;
+    min-width: 200px;
+    box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+    z-index: 1000;
+    border-radius: 6px;
+    overflow: hidden;
+    font-size: 14px;
+  }
+  
+  .dropdown:hover .dropdown-content,
+  .dropdown:focus-within .dropdown-content {
+    display: block;
+  }
+  
+  .dropdown-content a {
+    color: #333;
+    padding: 12px 16px;
+    text-decoration: none;
+    display: block;
+    background-color: #fff;
+    transition: background-color 0.2s;
+    white-space: nowrap;
+  }
+  
+  .dropdown-content a:hover {
+    background-color: #f1f1f1;
+  }
+  
+  .settings-icon {
+    font-size: 20px;
+    background-color: #388e3c;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    justify-content: center;
+    align-items: center;
+    display: flex;
+  }
+  
+  .dropdown.settings-dropdown {
+    position: relative;
+  }
+  
+  .dropdown.settings-dropdown .dropdown-content {
+    right: 0;
+    left: auto;
+    top: 100%;
+>>>>>>> 607d24114de2e1ba82acf7372754a9d2f7bad504
   }
