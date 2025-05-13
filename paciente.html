@@ -147,6 +147,7 @@
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 
   <script>
+    // Inicialização Firebase
     const firebaseConfig = {
       apiKey: "AIzaSyDH2DCReck0Jq9C19kRKGmxIlHed2eSmSU",
       authDomain: "vidaplus-9a083.firebaseapp.com",
@@ -158,6 +159,13 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
     const auth = firebase.auth();
+
+    // Formatação de data para DD/MM/YYYY
+    function formatDateBr(dateStr) {
+      if (!dateStr) return '';
+      const [year, month, day] = dateStr.split('-');
+      return `${day}/${month}/${year}`;
+    }
 
     let pacientes = [];
     let editandoId = null;
@@ -175,10 +183,7 @@
         alert('Sessão expirada. Faça login novamente.');
         return window.location.href = 'login.html';
       }
-      // Exibe o nome do usuário no menu
-      if (userLabel) {
-        userLabel.textContent = 'Usuário: ' + nome;
-      }
+      userLabel.textContent = 'Usuário: ' + nome;
     });
 
     async function carregarPacientes() {
@@ -195,7 +200,7 @@
         tr.innerHTML = `
           <td>${paciente.nome}</td>
           <td>${paciente.cpf}</td>
-          <td>${paciente.nascimento}</td>
+          <td>${formatDateBr(paciente.nascimento)}</td>
           <td>${paciente.email}</td>
           <td>${paciente.celular}</td>
           <td>
@@ -219,7 +224,6 @@
     }
 
     async function salvarPaciente() {
-      // Formata telefone para E.164
       const rawTelefone = document.getElementById('celular').value.trim();
       const digits = rawTelefone.replace(/\D/g, '');
       const celularE164 = `+55${digits}`;
